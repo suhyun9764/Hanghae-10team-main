@@ -64,7 +64,7 @@ class Diary(db.Model):
 def diary_list():
     member_id_to_query = session.get('member_id')
     if member_id_to_query : 
-        all_diaries = Diary.query.filter_by(member_id=member_id_to_query).all()
+        all_diaries = Diary.query.filter_by(member_id=member_id_to_query).order_by(desc(Diary.diary_id)).all()
         return render_template('diary.html', all_diaries=all_diaries)
     else :
         return redirect(url_for('sign_in'))
