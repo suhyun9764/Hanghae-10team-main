@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from sqlalchemy import asc
+from sqlalchemy import desc
 from flask_migrate import Migrate
 
 
@@ -72,12 +73,12 @@ def diary_list():
 def search():
     member_id_to_query = session.get('member_id')
     if member_id_to_query : 
-        data = []
-        # URL에서 'query' 파라미터를 가져옵니다.
-        query = request.args.get('query', '').lower()
-        # 검색어에 해당하는 자료를 찾습니다.
-        search_results = [item for item in data if query in item['title'].lower()]
-        return render_template('search_results.html', query=query, results=search_results)
+        query = request.args.get('query', '')
+        results = []
+        if query:
+            results = Diary.query.filter(db.func.lower(Diary.title).contains(
+            query.lower())).order_by(desc(Diary.diary_id)).all()
+            return render_template('diary_search.html', data=results)
     else :
         return redirect(url_for('sign_in'))
 
@@ -103,6 +104,7 @@ def diary_regist():
 @app.route('/diary/<num>', methods=['GET', 'POST'])
 def diary_detail(num):
     member_id_to_query = session.get('member_id')
+    print("post:"+ member_id_to_query)
     if member_id_to_query : 
         diary = Diary.query.filter_by(diary_id=num).first()
         if diary :
@@ -110,11 +112,13 @@ def diary_detail(num):
                 new_title = request.form['title']
                 new_main_text = request.form['mainText']
                 diary.title = new_title
-                diary.mainText = new_main_text
+                diary.main_text = new_main_text
                 db.session.commit()
                 return redirect(url_for('diary_list'))
             else :
                 return render_template('diary_detail.html', diary=diary)
+        else :
+            return render_template('diary_detail.html', diary=diary)
     else :
         return redirect(url_for('sign_in'))
 
@@ -123,6 +127,7 @@ def diary_detail(num):
 @app.route('/diary/delete/<diaryId>', methods=['post'])
 def delete_diary(diaryId):
     diary = Diary.query.get_or_404(diaryId)
+    print(diary.diary_id)
     db.session.delete(diary)
     db.session.commit()
     return jsonify({'success': True, 'redirect': url_for('diary_list')})
@@ -165,7 +170,7 @@ def sign_in():
         if member:
             # 로그인 성공 시 세션에 사용자 정보 저장
             session['member_id'] = checkId
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('index'))
         else:
             return render_template('signin.html', msg='아이디 또는 비밀번호를 확인해 주세요')
 
